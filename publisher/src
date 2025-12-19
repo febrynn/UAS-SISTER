@@ -1,0 +1,47 @@
+# File: /uts-event-system/uts-event-system/publisher/src/publisher.py
+
+import requests
+import json
+import random
+import time
+
+class EventPublisher:
+    def __init__(self, target_url):
+        self.target_url = target_url
+
+    def publish_event(self, event):
+        response = requests.post(self.target_url, json=event)
+        return response.status_code, response.json()
+
+    def publish_batch(self, events):
+        response = requests.post(self.target_url, json=events)
+        return response.status_code, response.json()
+
+    def generate_event(self, topic, event_id, source, payload):
+        return {
+            "topic": topic,
+            "event_id": event_id,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "source": source,
+            "payload": payload
+        }
+
+    def simulate_events(self, topic, source, num_events=100):
+        unique_ids = set()
+        events = []
+        for _ in range(num_events):
+            event_id = str(random.randint(1, 10000))
+            while event_id in unique_ids:
+                event_id = str(random.randint(1, 10000))
+            unique_ids.add(event_id)
+            payload = {"data": f"Sample data for event {event_id}"}
+            event = self.generate_event(topic, event_id, source, payload)
+            events.append(event)
+        return events
+
+if __name__ == "__main__":
+    publisher = EventPublisher(target_url="http://aggregator:8080/publish")
+    events = publisher.simulate_events(topic="test_topic", source="simulator", num_events=10)
+    for event in events:
+        status_code, response = publisher.publish_event(event)
+        print(f"Published event {event['event_id']} with status {status_code}: {response}")

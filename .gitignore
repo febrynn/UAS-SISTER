@@ -1,0 +1,12 @@
+# environment variables
+.env
+.env.*
+
+# docker volumes / data
+**/data
+**/volumes
+
+# python
+__pycache__/
+*.pyc
+.venv/
