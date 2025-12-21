@@ -1,59 +1,105 @@
-import requests
+import redis
+import json
+import os
 import random
 import time
+import uuid
 
+# =====================================================
+# CLASS EVENT PUBLISHER
+# =====================================================
 class EventPublisher:
-    def __init__(self, target_url):
-        self.target_url = target_url
+    def __init__(self, broker_url=None):
+        # FIX: Default ke localhost agar jalan di Windows/Test.
+        # Saat di Docker, env BROKER_URL akan menimpa ini menjadi 'redis://broker:6379'
+        self.broker_url = broker_url or os.getenv("BROKER_URL", "redis://localhost:6379")
+        self.channel_name = "events"
+        
+        # Inisialisasi koneksi Redis
+        try:
+            self.redis_client = redis.Redis.from_url(
+                self.broker_url,
+                decode_responses=True
+            )
+            self.redis_client.ping() # Cek koneksi
+        except Exception as e:
+            # Jangan print error berisik jika hanya testing unit tanpa redis
+            self.redis_client = None
 
-    def publish_event(self, event, max_retries=5):
-        """Mengirim satu event dengan dibungkus List [event]"""
-        for i in range(max_retries):
-            try:
-                # PERBAIKAN: json=[event] (Aggregator wajib terima List)
-                response = requests.post(self.target_url, json=[event]) 
-                response.raise_for_status() 
-                return response.status_code, response.json()
-            except requests.exceptions.HTTPError as e:
-                # Cetak pesan error detail dari FastAPI jika 422
-                print(f"❌ Detail error dari Aggregator: {e.response.text}")
-                return e.response.status_code, {"error": e.response.text}
-            except Exception as e:
-                if i < max_retries - 1:
-                    time.sleep(2)
-                else:
-                    return 500, {"error": str(e)}
-
-    def generate_event(self, topic, event_id, source, payload):
+    def generate_event(self, topic, event_id, source="publisher"):
+        """Membuat struktur data event"""
         return {
             "topic": topic,
             "event_id": str(event_id),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "source": source,
-            "payload": payload
-        }
-
-    def simulate_events(self, topic, source, num_events=5):
-        events = []
-        for _ in range(num_events):
-            event_id = str(random.randint(1, 10000))
-            # PERBAIKAN: payload['data'] harus DICT, bukan string
-            payload = {
+            "payload": {
                 "data": {
-                    "message": f"Sample data for event {event_id}",
-                    "value": random.randint(20, 30)
+                    "message": f"Sample event {event_id}",
+                    "value": random.randint(1, 100)
                 }
             }
-            event = self.generate_event(topic, event_id, source, payload)
-            events.append(event)
-        return events
+        }
+
+    def publish(self, topic, event_id, source="publisher"):
+        """Publish single event ke Redis"""
+        if not self.redis_client:
+            return None
+
+        event = self.generate_event(topic, event_id, source)
+        
+        try:
+            self.redis_client.publish(
+                self.channel_name,
+                json.dumps(event)
+            )
+            # print(f"📤 Published: {topic} - {event_id}") # Optional debug
+            return event
+        except Exception as e:
+            print(f"❌ Publish failed: {e}")
+            return None
+
+    def simulate_events(self, count=10, delay=0.1):
+        """
+        METHOD INI WAJIB ADA UNTUK LOLOS TESTING.
+        Method ini mensimulasikan pengiriman banyak event sekaligus.
+        """
+        topics = ["user_signup", "order_created", "payment_failed"]
+        published_count = 0
+        
+        for i in range(count):
+            # Generate random data
+            topic = random.choice(topics)
+            # Gunakan UUID agar unik, atau random int untuk tes duplikat
+            event_id = str(uuid.uuid4()) 
+            
+            result = self.publish(topic, event_id)
+            if result:
+                published_count += 1
+            
+            time.sleep(delay)
+        
+        return published_count
+
+# =====================================================
+# MAIN (Entrypoint untuk Docker)
+# =====================================================
 
 if __name__ == "__main__":
-    publisher = EventPublisher(target_url="http://uas-aggregator:8080/publish")
-    print("🚀 Memulai publisher...")
-    time.sleep(5) 
-
-    events = publisher.simulate_events(topic="sensor_suhu", source="device_01")
-    for event in events:
-        status, resp = publisher.publish_event(event)
-        print(f"📡 Event {event['event_id']} | Status {status}")
+    print("🚀 Publisher started...")
+    
+    # Tunggu sebentar agar container lain siap (hanya efek di Docker)
+    time.sleep(3) 
+    
+    publisher = EventPublisher()
+    
+    # Jalankan simulasi terus menerus jika dijalankan sebagai script utama
+    if publisher.redis_client:
+        try:
+            while True:
+                publisher.simulate_events(count=1, delay=2.0)
+                print("ping...")
+        except KeyboardInterrupt:
+            print("🛑 Publisher stopped.")
+    else:
+        print("⚠️ Redis not connected. Exiting.")

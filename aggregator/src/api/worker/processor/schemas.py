@@ -1,38 +1,34 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, scoped_session
-import os
+from pydantic import BaseModel
+from typing import Dict, Any, List
+from datetime import datetime
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@storage:5432/db")
 
-Base = declarative_base()
-engine = create_engine(DATABASE_URL)
-Session = scoped_session(sessionmaker(bind=engine))
+class EventPayload(BaseModel):
+    """
+    Isi payload bebas, sesuai request kamu
+    """
+    data: Dict[str, Any]
 
-class ProcessedEvent(Base):
-    __tablename__ = 'processed_events'
-    
-    id = Column(Integer, primary_key=True)
-    topic = Column(String, nullable=False)
-    event_id = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=func.now())
-    
-    __table_args__ = (
-        UniqueConstraint('topic', 'event_id', name='uq_topic_event_id'),
-    )
 
-def init_db():
-    Base.metadata.create_all(engine)
+class EventSchema(BaseModel):
+    topic: str
+    event_id: str
+    timestamp: datetime
+    source: str
+    payload: EventPayload
 
-def upsert_event(topic, event_id):
-    session = Session()
-    try:
-        event = ProcessedEvent(topic=topic, event_id=event_id)
-        session.add(event)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        if "unique constraint" in str(e):
-            pass  # Ignore duplicate entry
-    finally:
-        session.close()
+
+class PublishResponse(BaseModel):
+    message: str
+
+
+class EventResponse(BaseModel):
+    id: int
+    topic: str
+    event_id: str
+    timestamp: datetime
+
+
+class StatsResponse(BaseModel):
+    topics: int
+    details: Dict[str, int]
