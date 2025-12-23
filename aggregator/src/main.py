@@ -34,7 +34,6 @@ class EventSchema(BaseModel):
     topic: str
     event_id: str
     timestamp: datetime
-    # Tambahkan field ini agar validasi Pydantic lolos saat Test kirim data lengkap
     source: Optional[str] = "unknown"
     payload: Optional[Dict[str, Any]] = None 
 
@@ -125,3 +124,5 @@ def publish_event(event_data: Union[EventSchema, List[EventSchema]]):
 
 if __name__ == "__main__":
     uvicorn.run("src.main:app", host="0.0.0.0", port=8080)
+    
+    

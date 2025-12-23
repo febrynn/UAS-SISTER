@@ -43,7 +43,6 @@ Base = declarative_base()
 # =====================================================
 class ProcessedEvent(Base):
     __tablename__ = "processed_events"
-
     id = Column(Integer, primary_key=True)
     topic = Column(String, nullable=False)
     event_id = Column(String, nullable=False)

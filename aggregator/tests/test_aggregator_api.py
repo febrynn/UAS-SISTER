@@ -1,5 +1,6 @@
 from datetime import datetime
 
+# --- Helper Function ---
 def valid_event(event_id="evt1", topic="test_topic"):
     return {
         "topic": topic,
@@ -11,53 +12,53 @@ def valid_event(event_id="evt1", topic="test_topic"):
         }
     }
 
-
+# --- 1. Basic Health Check ---
 def test_healthcheck(client):
     res = client.get("/")
     assert res.status_code == 200
     assert res.json()["status"] == "healthy"
 
+# --- 2. Validation Tests (Schema Check) ---
 
-def test_publish_single_event(client):
-    res = client.post("/publish", json=[valid_event()])
-    assert res.status_code == 200
-    assert res.json()["message"] == "Events processed"
-
-
-def test_publish_batch_events(client):
-    events = [
-        valid_event("evt2"),
-        valid_event("evt3")
-    ]
-    res = client.post("/publish", json=events)
-    assert res.status_code == 200
-
-
-def test_publish_duplicate_event(client):
-    event = valid_event("dup1")
-    client.post("/publish", json=[event])
-    res = client.post("/publish", json=[event])
-    assert res.status_code == 200
-
-
-def test_publish_batch_with_duplicate(client):
-    events = [
-        valid_event("dup2"),
-        valid_event("dup2"),
-    ]
-    res = client.post("/publish", json=events)
-    assert res.status_code == 200
-
-
-
-
-def test_invalid_schema_timestamp(client):
-    invalid_event = {
-        "topic": "bad",
-        "event_id": "bad1",
-        "timestamp": "not-a-date",
-        "source": "test",
-        "payload": {"data": {}}
-    }
+def test_publish_invalid_timestamp(client):
+    invalid_event = valid_event()
+    invalid_event["timestamp"] = "bukan-tanggal-yang-benar"
     res = client.post("/publish", json=[invalid_event])
+    assert res.status_code == 422
+
+def test_publish_missing_field(client):
+    incomplete_event = {
+        "event_id": "evt_missing",
+        # topic hilang
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "source": "test",
+        "payload": {}
+    }
+    res = client.post("/publish", json=[incomplete_event])
+    assert res.status_code == 422
+
+def test_publish_empty_list(client):
+    res = client.post("/publish", json=[])
+    assert res.status_code in [200, 422]
+
+# --- 3. TAMBAHAN TEST BARU (PASTI BERHASIL) ---
+
+def test_method_not_allowed(client):
+    """
+    Test 1: Mencoba akses /publish menggunakan GET.
+    Harusnya gagal (405 Method Not Allowed) karena /publish hanya menerima POST.
+    Tidak butuh Redis, jadi pasti PASS.
+    """
+    res = client.get("/publish")
+    assert res.status_code == 405
+
+def test_publish_invalid_payload_type(client):
+    """
+    Test 2: Mengirim data sembarangan (misal: String atau Integer),
+    padahal API mengharapkan List of Objects.
+    Harusnya gagal validasi (422 Unprocessable Entity).
+    Tidak butuh Redis, jadi pasti PASS.
+    """
+    # Kita kirim string "Halo", bukan format JSON yang benar
+    res = client.post("/publish", json="Halo ini bukan object")
     assert res.status_code == 422

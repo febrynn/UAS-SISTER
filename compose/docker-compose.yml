@@ -5,19 +5,20 @@ services:
     container_name: uas-aggregator
     depends_on:
       storage:
-        condition: service_healthy # Menunggu DB siap
+        condition: service_healthy 
       broker:
-        condition: service_healthy # Menunggu Redis siap
+        condition: service_healthy 
     env_file:
       - ../.env
     ports:
       - "8080:8080"
-    # Menambahkan pengecekan kesehatan aggregator
+    
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/stats"] 
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   publisher:
     build: ../publisher
@@ -25,10 +26,10 @@ services:
     container_name: uas-publisher
     depends_on:
       aggregator:
-        condition: service_healthy # Publisher HANYA jalan jika aggregator Healthy
+        condition: service_healthy 
     env_file:
       - ../.env
-    restart: on-failure # Jika gagal, Docker akan otomatis restart
+    restart: no # Jika gagal, 
 
   broker:
     image: redis:7-alpine
