@@ -50,3 +50,22 @@ Contributions are welcome! Please submit a pull request or open an issue for any
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
+## 🚀 Cara Menjalankan Aplikasi
+
+### 1. Setup Lingkungan Lokal (Opsional)
+Agar tidak ada error highlight di VS Code dan bisa menjalankan unit test, install dependencies dulu:
+
+```bash
+pip install -r aggregator/requirements.txt
+# Jika ada folder publisher
+pip install -r publisher/requirements.txt
+
+##jalankan docker
+docker compose up --build -d
+docker compose up
+##membuka swagger
+http://localhost:8080/docs
+
+### 1. Setup Lingkungan Lokal (Opsional)
+LINK YT : https://youtu.be/-omMRRwRXQA 
+LINK Drive : https://drive.google.com/drive/folders/1z6RNPEfj8igsFi8Lc1JE12nwng4_jnRi?usp=sharing
