@@ -1,36 +1,30 @@
-# Storage Service Documentation
+# Aggregator Data System (UAS Sistem Terdistribusi)
 
-The storage service is responsible for persisting event data in a reliable and efficient manner. It utilizes a relational database to ensure data integrity and support for complex queries.
+Sistem aggregator berbasis Microservices untuk menangani pengiriman data event dengan fitur **Idempotency** dan **Deduplikasi** menggunakan FastAPI, Redis, dan PostgreSQL.
 
-## Database Schema
+## 📋 Prasyarat
+Pastikan di komputer sudah terinstall:
+- **Docker Desktop** (harus dalam keadaan aktif/running).
+- **Python 3.11+** (untuk menjalankan test script lokal).
 
-The storage service uses the following tables:
+---
 
-1. **processed_events**: Stores unique events that have been processed.
-   - Columns: `topic`, `event_id`, `timestamp`, `source`, `payload`
+## 🚀 Cara Menjalankan Aplikasi
 
-2. **outbox**: Temporarily holds events that need to be published to the aggregator.
-   - Columns: `topic`, `event_id`, `timestamp`, `source`, `payload`, `processed`
+### 1. Setup Lingkungan Lokal (Opsional)
+Agar tidak ada error highlight di VS Code dan bisa menjalankan unit test, install dependencies dulu:
 
-3. **stats**: Maintains statistics about event processing.
-   - Columns: `received`, `unique_processed`, `duplicate_dropped`, `topics`, `uptime`
+```bash
+pip install -r aggregator/requirements.txt
+# Jika ada folder publisher
+pip install -r publisher/requirements.txt
 
-## Initialization
+##jalankan docker
+docker compose up --build -d
+docker compose up
+##membuka swagger
+http://localhost:8080/docs
 
-The database schema is defined in the `init.sql` file. This file should be executed to set up the necessary tables before the application starts.
-
-## Usage
-
-The storage service is integrated with the aggregator service, which interacts with it to store and retrieve event data. Ensure that the database connection details are correctly configured in the environment variables.
-
-## Persistence
-
-Data is persisted using PostgreSQL, ensuring durability and consistency. The service is designed to handle concurrent access and maintain data integrity through transactions.
-
-## Health Checks
-
-Implement health checks to monitor the status of the storage service and ensure it is operational.
-
-## Additional Information
-
-Refer to the main project README for overall architecture and service interactions.
+### 1. Setup Lingkungan Lokal (Opsional)
+LINK YT : https://youtu.be/-omMRRwRXQA 
+LINK Drive : https://drive.google.com/drive/folders/1z6RNPEfj8igsFi8Lc1JE12nwng4_jnRi?usp=sharing
